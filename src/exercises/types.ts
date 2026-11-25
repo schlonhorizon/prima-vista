@@ -1,10 +1,12 @@
 import type { StaffMode } from '../core/notation';
-import type { Pitch } from '../core/pitch';
+import type { Pitch, PitchClass } from '../core/pitch';
 import type { StatsGroup } from '../stats/statsView';
 import type { DiatonicChord } from '../theory/chords';
 import type { Interval } from '../theory/interval';
 import type { Key } from '../theory/key';
 import type { RhythmPattern } from '../rhythm/generator';
+import type { ChordSymbolType } from '../theory/chordSymbols';
+import type { PitchClassAnswer } from './pitchClassMatcher';
 
 /** What a task is about, in music theory terms – used by tips, explanations and lessons. */
 export type TaskInfo =
@@ -20,7 +22,15 @@ export type TaskInfo =
     }
   | { readonly kind: 'chord'; readonly chord: DiatonicChord; readonly inversion: number; readonly pitches: readonly Pitch[] }
   | { readonly kind: 'keysig'; readonly fifths: number }
-  | { readonly kind: 'rhythm'; readonly pattern: RhythmPattern; readonly bars: number; readonly bpm: number };
+  | { readonly kind: 'rhythm'; readonly pattern: RhythmPattern; readonly bars: number; readonly bpm: number }
+  | {
+      readonly kind: 'chordsym';
+      readonly root: PitchClass;
+      readonly type: ChordSymbolType;
+      readonly notation: 'international' | 'german';
+      /** Strict: the root (or the slash bass) must be the lowest note. */
+      readonly strict: boolean;
+    };
 
 /**
  * One thing the player has to do. Every exercise type maps onto this shape:
@@ -56,6 +66,11 @@ export interface Task {
   readonly message?: string;
   /** Theory data for the knowledge layer. */
   readonly info?: TaskInfo;
+  /**
+   * Answer by pitch classes instead of exact notes (chord symbols): any inversion
+   * and octave counts. `steps` then only hold a reference voicing.
+   */
+  readonly pitchClassAnswer?: PitchClassAnswer;
   /**
    * Statistics keys a skip is recorded under; defaults to [itemKey]. Tasks made of
    * several elements (e.g. a rhythm of several patterns) list all of them.

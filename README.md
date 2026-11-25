@@ -16,6 +16,9 @@ Modi:
   Stufen bis zu Triolen und Sechzehnteln; Auswertung pro Note (auf den Punkt, zu früh, zu spät)
   mit einstellbarer Toleranz, Metronom hörbar und als pulsierender Punkt, Kalibrierung der
   Eingabeverzögerung.
+- **Akkordsymbole:** Symbol lesen („Fmaj9“, „B♭m7“, „C/E“) und greifen – jede Umkehrung zählt,
+  optional strikt mit Grundton im Bass. Fünf freischaltbare Levels, deutsche oder internationale
+  Schreibweise, adaptive Gewichtung schwacher Akkordtypen; danach Töne, Formel und Mini-Klaviatur.
 - **Tonarten:** Vorzeichnung erkennen, Dur- und parallele Moll-Tonart per Button wählen;
   Quintenzirkel als ausblendbare Hilfe, der nach der Antwort die Lösung hervorhebt.
 

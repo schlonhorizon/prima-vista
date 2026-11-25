@@ -1,4 +1,5 @@
-import { StepMatcher, type StepResult } from '../exercises/matcher';
+import { StepMatcher, type Matcher, type StepResult } from '../exercises/matcher';
+import { PitchClassMatcher } from '../exercises/pitchClassMatcher';
 import { taskPitches, type Exercise, type Task } from '../exercises/types';
 import { toMidi } from '../core/pitch';
 import type { InputHub } from '../input/inputHub';
@@ -23,6 +24,8 @@ export interface TaskResult {
   readonly assisted: boolean;
   /** The task was skipped; the solution is shown, nothing counts as a mistake. */
   readonly skipped: boolean;
+  /** Pitch-class tasks: all tones right, but the required bass note was not the lowest. */
+  readonly bassWrong?: boolean;
 }
 
 export interface TrainerCallbacks {
@@ -48,7 +51,7 @@ const DEFAULT_TIMING: TrainerTiming = { afterCorrectMs: 650, afterWrongMs: 2400,
 export class Trainer {
   private task: Task | null = null;
   private stepIndex = 0;
-  private matcher: StepMatcher | null = null;
+  private matcher: Matcher | null = null;
   private startedAt = 0;
   private waiting = false;
   /** Waiting after an answer and not advancing until resume() (e.g. explanation open). */
@@ -186,8 +189,10 @@ export class Trainer {
     this.finish(correct, performance.now(), { played: [], missing: [], extra: [], timeout: false, answerText });
   }
 
-  private newMatcher(): StepMatcher {
-    return new StepMatcher(this.task!.steps[this.stepIndex], this.task!.chordWindowMs ?? 0);
+  private newMatcher(): Matcher {
+    const task = this.task!;
+    if (task.pitchClassAnswer) return new PitchClassMatcher(task.pitchClassAnswer, task.chordWindowMs ?? 0);
+    return new StepMatcher(task.steps[this.stepIndex], task.chordWindowMs ?? 0);
   }
 
   private onNote = (event: NoteEvent): void => {
@@ -213,19 +218,20 @@ export class Trainer {
       }
       return;
     }
-    if (result.status === 'correct' && this.stepIndex < this.task!.steps.length - 1) {
+    if (result.status === 'correct' && !this.task!.pitchClassAnswer && this.stepIndex < this.task!.steps.length - 1) {
       this.stepIndex++;
       this.matcher = this.newMatcher();
       return;
     }
     if (result.status === 'correct') {
-      this.finish(true, result.time, { played: [], missing: [], extra: [], timeout: false });
+      this.finish(true, result.time, { played: result.played ?? [], missing: [], extra: [], timeout: false });
     } else {
       this.finish(false, result.time, {
         played: result.played,
         missing: result.missing,
         extra: result.extra,
         timeout: result.reason === 'timeout',
+        bassWrong: result.reason === 'bass',
       });
     }
   }
@@ -233,7 +239,7 @@ export class Trainer {
   private finish(
     correct: boolean,
     eventTime: number,
-    details: Pick<TaskResult, 'played' | 'missing' | 'extra' | 'timeout' | 'answerText'>,
+    details: Pick<TaskResult, 'played' | 'missing' | 'extra' | 'timeout' | 'answerText' | 'bassWrong'>,
   ): void {
     const task = this.task!;
     const now = performance.now();

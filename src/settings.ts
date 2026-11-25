@@ -78,6 +78,22 @@ export interface RhythmSettings {
   latencyMs: number;
 }
 
+export type RootSelection = 'white' | 'all' | 'circle';
+
+export interface ChordSymbolSettings {
+  /** Highest level practised (1–5); levels above the unlocked one are not used. */
+  level: number;
+  /** Skip the unlock rule (all levels available). */
+  unlockAll: boolean;
+  notation: 'international' | 'german';
+  roots: RootSelection;
+  /** The root (or slash bass) must be the lowest note. */
+  strict: boolean;
+  adaptive: boolean;
+  /** 1 leicht, 2 normal, 3 stark */
+  adaptiveStrength: 1 | 2 | 3;
+}
+
 export interface Settings {
   practice: PracticeModeId;
   staff: StaffMode;
@@ -90,6 +106,7 @@ export interface Settings {
   chords: ChordSettings;
   keyQuiz: KeyQuizSettings;
   rhythm: RhythmSettings;
+  chordSymbols: ChordSymbolSettings;
   /** Show the explanation after every answer (and wait until the player continues). */
   autoExplain: boolean;
   /** Use the computer keyboard as piano (A–K …). Off frees H and L as plain shortcuts. */
@@ -125,6 +142,15 @@ export function defaultSettings(): Settings {
     },
     chords: { kinds: 'triads', inversions: [0, 1, 2, 3], degrees: [1, 2, 3, 4, 5, 6, 7] },
     keyQuiz: { maxAccidentals: 7, showCircle: true },
+    chordSymbols: {
+      level: 1,
+      unlockAll: false,
+      notation: 'international',
+      roots: 'white',
+      strict: false,
+      adaptive: true,
+      adaptiveStrength: 2,
+    },
     rhythm: { level: 1, bars: 2, bpm: 80, toleranceMs: 70, countIn: 1, sound: true, volume: 70, latencyMs: 0 },
     autoExplain: false,
     computerPiano: true,
@@ -168,6 +194,7 @@ export function sanitize(raw: Record<string, unknown>): Settings {
     chords: sanitizeChords(raw.chords, d.chords),
     keyQuiz: sanitizeKeyQuiz(raw.keyQuiz, d.keyQuiz),
     rhythm: sanitizeRhythm(raw.rhythm, d.rhythm),
+    chordSymbols: sanitizeChordSymbols(raw.chordSymbols, d.chordSymbols),
     autoExplain: bool(raw.autoExplain, d.autoExplain),
     computerPiano: bool(raw.computerPiano, d.computerPiano),
     showNoteNames: bool(raw.showNoteNames, d.showNoteNames),
@@ -273,6 +300,19 @@ function sanitizeRhythm(raw: unknown, d: RhythmSettings): RhythmSettings {
     sound: bool(r.sound, d.sound),
     volume: int(r.volume, 0, 100, d.volume),
     latencyMs: int(r.latencyMs, -500, 500, d.latencyMs),
+  };
+}
+
+function sanitizeChordSymbols(raw: unknown, d: ChordSymbolSettings): ChordSymbolSettings {
+  const r = (raw ?? {}) as Partial<ChordSymbolSettings>;
+  return {
+    level: int(r.level, 1, 5, d.level),
+    unlockAll: bool(r.unlockAll, d.unlockAll),
+    notation: oneOf(r.notation, ['international', 'german'], d.notation),
+    roots: oneOf(r.roots, ['white', 'all', 'circle'], d.roots),
+    strict: bool(r.strict, d.strict),
+    adaptive: bool(r.adaptive, d.adaptive),
+    adaptiveStrength: int(r.adaptiveStrength, 1, 3, d.adaptiveStrength) as 1 | 2 | 3,
   };
 }
 

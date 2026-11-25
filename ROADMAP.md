@@ -21,7 +21,8 @@ Klaviersystem/Violin-/Bassschlüssel, Tonumfang-Presets und Lagen-Gewichtung.
 | 3    | Akkorde                            | fertig        |
 | 4    | Tonart erkennen                    | fertig        |
 | 5    | Rhythmus (Timing-, Audio-Engine)   | fertig        |
-| 6    | Adaptive Logik                     | geplant       |
+| 5a   | Akkordsymbole (Tonklassen, adaptiv) | fertig       |
+| 6    | Adaptive Logik                     | begonnen (Baustein in 5a) |
 | 7    | Abfolgen (Progressionen, Phrasen)  | geplant       |
 | 8    | Vorauslesen, beide Hände           | geplant       |
 | 9    | Leadsheets, Voicings               | geplant       |
@@ -238,6 +239,28 @@ Designentscheidungen (gegenüber der ersten Planung angepasst):
   („1 und 2 und“, Silbenhilfen); Tipp = Zählweise des Rhythmus; Erklärung = Zählweise, eigene
   Ausführung mit Tendenz und eine kurze Beschreibung jedes Musters.
 
+## Teil 5a: Akkordsymbole ✔
+
+Abhängig von: 1, Mehrton-Prüfung; liefert den **Tonklassen-Matcher** (für Teil 9) und den ersten
+Baustein der **adaptiven Logik** (Teil 6).
+- Ein Akkordsymbol („Fmaj9“, „B♭m7“, „C/E“) wird gezeigt, gegriffen wird auf dem Klavier.
+- Erkennung nach Tonklassen (`PitchClassMatcher`): jede Umkehrung, Lage und Verdopplung zählt;
+  Option „Strikt“: der Grundton muss unten liegen; Slash-Akkorde verlangen immer den Basston.
+  Bei 9/11-Akkorden (und 6/9) darf die Quinte fehlen.
+- Fünf freischaltbare Levels (Dur/Moll/sus → add9/6 → Septakkorde → 9er und 6/9 → m11, 7sus4,
+  Slash). Level n+1 öffnet sich bei ≥ 80 % über ≥ 20 Antworten ohne Tipp in Level n; „Alle Level
+  freischalten“ überspringt die Regel.
+- Schreibweise international (B, B♭; Standard, wie Songsheets und Logic) oder deutsch (H, B,
+  Fis, Es); Grundtöne: weiße Tasten, alle 12 (Leadsheet-Schreibweise) oder Quintenzirkel-Reihenfolge
+  (C G D A E H Fis Des As Es B F).
+- Nach der Antwort: Töne, Intervallformel (1 – ♭3 – 5 – 7 – 9) und eine kleine Klaviatur mit
+  gegriffenen, fehlenden und falschen Tönen.
+- Statistik pro Akkordtyp (Quote, Ø Reaktionszeit, aktueller adaptiver Faktor).
+- Adaptive Gewichtung pro Akkordtyp (aus / leicht / normal / stark) über `exercises/adaptive.ts`.
+- Wissen: Lektion zum Lesen von Symbolen, Bausteinen, Umkehrungen, Slash-Akkorden und deutscher
+  vs. internationaler Schreibweise; Tipp erklärt die Bausteine des Symbols (ohne Töne);
+  Erklärung mit Tönen, Formel und Klangbeschreibung je Typ.
+
 ## Teil 6: Adaptive Logik (geplant)
 
 Abhängig von: einheitliche Statistik (vorhanden). Wirkt auf alle Modi.
@@ -253,6 +276,10 @@ Abhängig von: einheitliche Statistik (vorhanden). Wirkt auf alle Modi.
 - Parameter in den Einstellungen: Einfluss Fehler, Einfluss Langsamkeit, Erholungsrate
   (Halbwertszeit in Versuchen), Einfluss der Pause, minimaler/maximaler Faktor.
 - Anzeige des aktuellen Faktors in der Statistik-Tabelle zur Feinjustierung.
+- Stand: `exercises/adaptive.ts` setzt Fehlerquote (neuere Versuche zählen mehr, Tipp ½,
+  Überspringen ¾), Langsamkeit relativ zum Median und Unbekannt-Bonus um; drei Stärken als
+  Voreinstellung, Faktor in der Statistik sichtbar. Eingesetzt im Modus Akkordsymbole. Offen:
+  Einsatz in allen übrigen Modi, frei einstellbare Parameter, Einfluss der Pause.
 - Wissen: Erklärtext in den Einstellungen, wie die Parameter wirken (keine Lektion nötig).
 
 ## Teil 7: Abfolgen (geplant)
@@ -287,7 +314,8 @@ Abhängig von: 7; 5 für die wandernde Variante.
 
 Abhängig von: 1, 3, 7.
 - Leadsheet: Melodie notiert, Akkordsymbole darüber. Melodie exakt geprüft, linke Hand nach
-  Tonklassen (Matcher-Variante „pitch classes“, Lage egal).
+  Tonklassen (der `PitchClassMatcher` aus Teil 5a, Lage egal); Symbole und Schreibweise aus
+  `theory/chordSymbols.ts`.
 - Voicings: Shell (1-3-7, 1-7-3), Rootless (A/B-Form, 3-5-7-9 / 7-9-3-5) über ii–V–I in allen
   Tonarten; Voicing-Katalog im Theorie-Kern.
 - Wissen: Lektion zu Akkordsymbolen und Voicing-Typen; Tipp = Guide Tones (Terz/Septime);

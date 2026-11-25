@@ -4,11 +4,12 @@ import type { TaskStep } from './types';
 
 export type StepResult =
   | { status: 'pending' }
-  | { status: 'correct'; time: number }
+  | { status: 'correct'; time: number; played?: number[] }
   | {
       status: 'wrong';
       time: number;
-      reason: 'wrong-note' | 'timeout';
+      /** bass = all tones right, but the required bass note is not the lowest. */
+      reason: 'wrong-note' | 'timeout' | 'bass';
       /** Everything held at the moment of the mistake, including the wrong key. */
       played: number[];
       /** Expected notes that were not (yet) held. */
@@ -17,13 +18,21 @@ export type StepResult =
       extra: number[];
     };
 
+/** Common interface of the note matchers used by the trainer. */
+export interface Matcher {
+  handle(event: NoteEvent): StepResult;
+  /** Time by which the step must be complete, or null if no window is running. */
+  deadline(): number | null;
+  expire(now: number): StepResult;
+}
+
 /**
  * Decides whether incoming notes answer one task step. A step is solved once all
  * its pitches are held at the same time (exact octave); any other key is wrong.
  * For a single note the first key press decides. With a time window, all notes
  * of a multi-note step must be struck within `windowMs` of the first one.
  */
-export class StepMatcher {
+export class StepMatcher implements Matcher {
   private expected: Set<number>;
   private held = new Set<number>();
   private firstOn: number | null = null;

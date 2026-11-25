@@ -36,6 +36,20 @@
           <p id="feedback" class="feedback"></p>
           <p id="feedback-detail" class="feedback-detail"></p>
         </div>
+        <div class="chord-result" id="chord-result" hidden>
+          <dl class="chord-facts">
+            <div><dt>Töne</dt><dd id="chord-tones"></dd></div>
+            <div><dt>Formel</dt><dd id="chord-formula"></dd></div>
+          </dl>
+          <p class="chord-issues" id="chord-issues"></p>
+          <div class="mini-keyboard" id="chord-keys" aria-hidden="true"></div>
+          <p class="mini-legend">
+            <span class="legend hit">gegriffen</span>
+            <span class="legend missing">fehlt</span>
+            <span class="legend wrong">falsch</span>
+            <span class="legend optional">darf fehlen</span>
+          </p>
+        </div>
         <div class="knowledge-bar" role="toolbar" aria-label="Wissen und Ablauf">
           <button type="button" class="quiet" id="tip-button">Tipp <kbd data-shortcut="tip"></kbd></button>
           <button type="button" class="quiet" id="explain-button" disabled>Mehr erfahren <kbd data-shortcut="explain"></kbd></button>
@@ -192,6 +206,37 @@
             <div class="check-group full" id="degree-checks" role="group" aria-label="Stufen"></div>
             <p class="hint full">Die 3. Umkehrung gibt es nur bei Septakkorden. In Moll stammen V und vii° aus harmonischem Moll.</p>
           </fieldset>
+          <fieldset data-modes="chordsymbols">
+            <legend>Akkordsymbole</legend>
+            <label>Level <select name="symbolLevel"></select></label>
+            <label>
+              Schreibweise
+              <select name="symbolNotation">
+                <option value="international">international (B, B♭ – wie Songsheets, Logic)</option>
+                <option value="german">deutsch (H, B)</option>
+              </select>
+            </label>
+            <label>
+              Grundtöne
+              <select name="symbolRoots">
+                <option value="white">nur weiße Tasten</option>
+                <option value="all">alle 12</option>
+                <option value="circle">Quintenzirkel-Reihenfolge</option>
+              </select>
+            </label>
+            <label>
+              Adaptive Gewichtung
+              <select name="symbolAdaptive">
+                <option value="0">aus</option>
+                <option value="1">leicht</option>
+                <option value="2">normal</option>
+                <option value="3">stark</option>
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" name="symbolStrict" /> Strikt: Grundton muss unten liegen</label>
+            <label class="check"><input type="checkbox" name="symbolUnlockAll" /> Alle Level freischalten</label>
+            <p class="hint full" id="symbol-level-info"></p>
+          </fieldset>
           <fieldset data-modes="keys">
             <legend>Tonarten erkennen</legend>
             <label>Vorzeichnungen bis <select name="quizMaxAccidentals"></select></label>
@@ -250,13 +295,13 @@
           </fieldset>
           <fieldset>
             <legend>Eingabe und Anzeige</legend>
-            <label class="check" data-modes="notes intervals chords rhythm"><input type="checkbox" name="computerPiano" /> Computertastatur als Klavier</label>
-            <label class="check" data-modes="notes intervals chords"><input type="checkbox" name="showNoteNames" /> Notennamen auf den Tasten</label>
-            <label class="check" data-modes="notes intervals chords"><input type="checkbox" name="showComputerKeys" /> Computertasten auf den Tasten</label>
-            <label class="check" data-modes="intervals chords">
+            <label class="check" data-modes="notes intervals chords chordsymbols rhythm"><input type="checkbox" name="computerPiano" /> Computertastatur als Klavier</label>
+            <label class="check" data-modes="notes intervals chords chordsymbols"><input type="checkbox" name="showNoteNames" /> Notennamen auf den Tasten</label>
+            <label class="check" data-modes="notes intervals chords chordsymbols"><input type="checkbox" name="showComputerKeys" /> Computertasten auf den Tasten</label>
+            <label class="check" data-modes="intervals chords chordsymbols">
               <input type="checkbox" name="selectionMode" /> Bildschirmtastatur: Töne auswählen und bestätigen
             </label>
-            <label data-modes="intervals chords">
+            <label data-modes="intervals chords chordsymbols">
               Zeitfenster für Akkorde (ms, 0 = ohne)
               <input type="number" name="chordWindowMs" min="0" max="5000" step="50" inputmode="numeric" />
             </label>

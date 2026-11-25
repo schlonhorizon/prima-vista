@@ -4,6 +4,9 @@ import { ChordExercise } from '../exercises/chords';
 import { IntervalExercise } from '../exercises/intervals';
 import { checkKeyAnswer, KeyQuizExercise } from '../exercises/keyQuiz';
 import { RhythmExercise } from '../exercises/rhythm';
+import { ADAPTIVE_STRENGTHS, adaptiveModifier } from '../exercises/adaptive';
+import { CHORD_SYMBOL_ID, ChordSymbolExercise, chordSymbolItemKey, unlockedLevel } from '../exercises/chordSymbols';
+import { CHORD_SYMBOL_TYPES } from '../theory/chordSymbols';
 import { AudioEngine } from '../audio/audioEngine';
 import { KeyContext } from '../exercises/keyContext';
 import { WeightedSelector } from '../exercises/selection';
@@ -20,6 +23,7 @@ import { fifthsOf, germanKeyName } from '../theory/key';
 import { Trainer, type TaskResult } from '../trainer/trainer';
 import { KNOWLEDGE } from '../knowledge/providers';
 import { KeyQuizPanel } from './keyQuizPanel';
+import { ChordSymbolView } from './chordSymbolView';
 import { KnowledgeUi } from './knowledgeUi';
 import { RhythmUi } from './rhythmUi';
 import { OnScreenKeyboard } from './onScreenKeyboard';
@@ -66,6 +70,8 @@ export class App {
   private knowledge!: KnowledgeUi;
   private rhythm!: RhythmUi;
   private audio = new AudioEngine();
+  private chordView = new ChordSymbolView();
+  private symbolLevelBefore = 1;
   private session: SessionStats = { correct: 0, wrong: 0, timeSum: 0, timeCount: 0 };
 
   private feedbackEl = $('feedback');
@@ -106,6 +112,20 @@ export class App {
         () => Object.keys(this.stats.allItems()),
       ),
       keys: new KeyQuizExercise(() => ({ staff: this.settings.staff, settings: this.settings.keyQuiz }), selector()),
+      chordsymbols: new ChordSymbolExercise(
+        () => this.settings.chordSymbols,
+        this.stats,
+        new WeightedSelector({
+          modifiers: [
+            adaptiveModifier(
+              this.stats,
+              () => CHORD_SYMBOL_TYPES.map(chordSymbolItemKey),
+              () => (this.settings.chordSymbols.adaptive ? ADAPTIVE_STRENGTHS[this.settings.chordSymbols.adaptiveStrength] : null),
+            ),
+          ],
+        }),
+        () => this.settings.chordWindowMs,
+      ),
       // Rhythm patterns repeat naturally (quarter, quarter …), so no repeat avoidance.
       rhythm: new RhythmExercise(() => this.settings.rhythm, new WeightedSelector({ avoidRepeat: false })),
     };
@@ -151,6 +171,7 @@ export class App {
       get: () => this.settings,
       change: (next) => this.commit(next),
       rangeInfo: () => this.rangeInfo(),
+      unlockedSymbolLevel: () => unlockedLevel(this.stats),
     });
     $('reset-stats').addEventListener('click', () => {
       if (window.confirm('Gesamte Statistik (alle Modi) wirklich löschen?')) this.stats.reset();
@@ -223,7 +244,14 @@ export class App {
     const rhythm = task.info?.kind === 'rhythm';
     $('rhythm-card').hidden = !rhythm;
     this.rhythm.show(rhythm ? task : null);
-    if (!rhythm) this.staff.render(task.layout, task.steps, 'none', task.key);
+    const symbol = task.exerciseId === CHORD_SYMBOL_ID;
+    if (symbol) {
+      this.chordView.show(task);
+      this.symbolLevelBefore = unlockedLevel(this.stats);
+    } else {
+      $('chord-result').hidden = true;
+      if (!rhythm) this.staff.render(task.layout, task.steps, 'none', task.key);
+    }
     // Name the key for playing tasks; for choice tasks the key is the question.
     $('task-caption').textContent = task.key && task.answer === 'play' ? germanKeyName(task.key) : '';
     this.feedbackEl.textContent = task.message ?? '';
@@ -242,7 +270,9 @@ export class App {
   private showResult(r: TaskResult): void {
     const { task } = r;
     if (task.info?.kind === 'rhythm') return this.showRhythmResult(r);
-    this.staff.render(task.layout, task.steps, r.skipped ? 'none' : r.correct ? 'correct' : 'wrong', task.key);
+    const symbol = task.exerciseId === CHORD_SYMBOL_ID;
+    if (symbol) this.chordView.showResult(r);
+    else this.staff.render(task.layout, task.steps, r.skipped ? 'none' : r.correct ? 'correct' : 'wrong', task.key);
     const time = r.reactionMs !== null ? ` · ${formatMs(r.reactionMs)}` : '';
     const names = (midis: readonly number[]) => midis.map((m) => germanName(midiToPitch(m))).join(', ');
     if (r.skipped) {
@@ -277,6 +307,15 @@ export class App {
       this.detailEl.textContent = parts.join(' · ');
       r.played.filter((m) => !r.expected.includes(m)).forEach((m) => this.keyboard.flash(m, 'wrong', 1200));
       r.expected.forEach((m) => this.keyboard.flash(m, 'hint', 2400));
+    }
+    if (symbol) {
+      // Tones, formula and mistakes are shown in the result panel.
+      this.detailEl.textContent = '';
+      const unlocked = unlockedLevel(this.stats);
+      if (!this.settings.chordSymbols.unlockAll && unlocked > this.symbolLevelBefore) {
+        this.detailEl.textContent = `Level ${unlocked} freigeschaltet – in den Einstellungen wählbar.`;
+        this.form.updateSymbolLevels();
+      }
     }
     this.keyboard.clearSelection();
     this.knowledge.onResult(task);
@@ -471,7 +510,9 @@ export class App {
 
   private applySettings(): void {
     const range = effectiveRange(this.settings);
-    this.keyboard.setRange(toMidi(range.low), toMidi(range.high));
+    // Chord symbols are played anywhere: show C3–B5 on the on-screen keyboard.
+    if (this.settings.practice === 'chordsymbols') this.keyboard.setRange(48, 83);
+    else this.keyboard.setRange(toMidi(range.low), toMidi(range.high));
     this.updateKeyboardLabels();
     this.updateModeNav();
     this.keyQuiz.setCircleVisible(this.settings.keyQuiz.showCircle);

@@ -18,6 +18,7 @@ import {
 } from '../theory/interval';
 import { fifthsOf, germanKeyName, keyFromFifths, keyScale, keySignature, type Key } from '../theory/key';
 import { countRhythm } from '../rhythm/counting';
+import { chordSymbolText, chordSymbolTones, degreeLabel, formulaText, noteName } from '../theory/chordSymbols';
 import type { RhythmEvaluation } from '../rhythm/evaluate';
 import { patternBars } from '../rhythm/generator';
 import { section } from './content';
@@ -356,6 +357,46 @@ export const rhythmKnowledge: KnowledgeProvider = {
   },
 };
 
+// --- Chord symbols ---------------------------------------------------------
+
+/** Symbol parts of each chord type, explained in the tip. */
+const SYMBOL_PARTS: Record<string, string[]> = {
+  maj: ['dur'], min: ['m'], sus2: ['sus2'], sus4: ['sus4'],
+  add9: ['dur', 'add9'], madd9: ['m', 'add9'], '6': ['dur', '6'], m6: ['m', '6'],
+  '7': ['dur', '7'], maj7: ['dur', 'maj7'], m7: ['m', '7'], mmaj7: ['m', 'maj7'],
+  '9': ['dur', '7', '9'], maj9: ['dur', 'maj7', '9'], m9: ['m', '7', '9'], mmaj9: ['m', 'maj7', '9'], '69': ['dur', '69'],
+  m11: ['m', '7', '11'], '7sus4': ['sus4', '7'], slash3: ['dur', 'slash'], slash5: ['dur', 'slash'], mslash3: ['m', 'slash'],
+};
+
+export const chordSymbolKnowledge: KnowledgeProvider = {
+  lesson: 'lessons/chordsymbols',
+
+  tip(task) {
+    const i = info(task, 'chordsym');
+    if (!i) return null;
+    const bassRule = i.type.bassInterval ? 'tipp.bass' : i.strict ? 'tipp.strikt' : null;
+    return text('chordsymbols', 'tipp', {
+      teile: (SYMBOL_PARTS[i.type.id] ?? []).map((part) => text('chordsymbols', `teil.${part}`)).join('\n'),
+      strikt: bassRule ? text('chordsymbols', bassRule) : '',
+    });
+  },
+
+  explain(task) {
+    const i = info(task, 'chordsym');
+    if (!i) return null;
+    const tones = chordSymbolTones(i.root, i.type);
+    return text('chordsymbols', 'erklaerung', {
+      symbol: chordSymbolText(i.root, i.type, i.notation),
+      name: i.type.name,
+      toene: tones.map((t) => `${noteName(t.pc, i.notation)} (${degreeLabel(t.intervalId)})`).join(' – '),
+      formel: formulaText(i.type),
+      beschreibung: text('chordsymbols', `typ.${i.type.id}`),
+      quinte: i.type.optional.length > 0 ? text('chordsymbols', 'quinte') : '',
+      bass: i.type.bassInterval ? text('chordsymbols', 'bass.slash') : i.strict ? text('chordsymbols', 'bass.strikt') : '',
+    });
+  },
+};
+
 /** Knowledge per exercise id. */
 export const KNOWLEDGE: Readonly<Record<string, KnowledgeProvider>> = {
   note: noteKnowledge,
@@ -363,4 +404,5 @@ export const KNOWLEDGE: Readonly<Record<string, KnowledgeProvider>> = {
   chord: chordKnowledge,
   keysig: keyKnowledge,
   rhythm: rhythmKnowledge,
+  chordsym: chordSymbolKnowledge,
 };
