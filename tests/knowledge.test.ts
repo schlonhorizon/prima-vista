@@ -7,6 +7,7 @@ import { IntervalExercise } from '../src/exercises/intervals';
 import { KeyContext } from '../src/exercises/keyContext';
 import { KeyQuizExercise } from '../src/exercises/keyQuiz';
 import { RhythmExercise } from '../src/exercises/rhythm';
+import { ChordSymbolExercise } from '../src/exercises/chordSymbols';
 import { WeightedSelector } from '../src/exercises/selection';
 import { SingleNoteExercise } from '../src/exercises/singleNote';
 import type { Exercise, Task } from '../src/exercises/types';
@@ -61,6 +62,13 @@ function allExercises(): Exercise[] {
     ),
     new KeyQuizExercise(() => ({ staff: 'grand', settings: { maxAccidentals: 7, showCircle: true } }), sel()),
     new RhythmExercise(() => ({ ...d.rhythm, level: 4, bars: 4 }), new WeightedSelector({ random: seeded(5), avoidRepeat: false })),
+    new ChordSymbolExercise(
+      () => ({ ...d.chordSymbols, level: 5, unlockAll: true, roots: 'all', strict: true }),
+      new StatsStore(memoryStorage()),
+      new WeightedSelector({ random: seeded(6) }),
+      () => 0,
+      seeded(7),
+    ),
   ];
 }
 
@@ -143,6 +151,9 @@ describe('knowledge providers', () => {
         if (task.info?.kind === 'keysig') {
           expect(tip).not.toContain('-Dur');
           expect(tip).not.toContain('-Moll');
+        } else if (task.info?.kind === 'chordsym') {
+          // The symbol is the question itself; the tip must not list the chord tones.
+          expect(tip, task.label).not.toContain(task.detail!.split(' · ')[0]);
         } else {
           expect(tip, task.label).not.toContain(task.label);
         }

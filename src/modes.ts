@@ -1,6 +1,6 @@
 /** All practice modes of the app, in navigation order. See ROADMAP.md. */
 export type PracticeModeId =
-  | 'notes' | 'intervals' | 'chords' | 'keys'
+  | 'notes' | 'intervals' | 'chords' | 'chordsymbols' | 'keys'
   | 'rhythm' | 'progressions' | 'reading' | 'leadsheets' | 'scales' | 'ear' | 'mixed' | 'primavista';
 
 export interface ModeInfo {
@@ -14,6 +14,7 @@ export const MODES: readonly ModeInfo[] = [
   { id: 'notes', label: 'Einzelnoten', ready: true },
   { id: 'intervals', label: 'Intervalle', ready: true },
   { id: 'chords', label: 'Akkorde', ready: true },
+  { id: 'chordsymbols', label: 'Akkordsymbole', ready: true },
   { id: 'keys', label: 'Tonarten', ready: true },
   { id: 'rhythm', label: 'Rhythmus', ready: true },
   { id: 'progressions', label: 'Abfolgen', ready: false },

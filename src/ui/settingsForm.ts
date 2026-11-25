@@ -6,6 +6,8 @@ import { naturalsBetween } from '../core/range';
 import { STANDARD_INTERVAL_NAMES } from '../exercises/intervals';
 import type { PracticeModeId } from '../modes';
 import { RHYTHM_LEVELS } from '../rhythm/cells';
+import { UNLOCK_MIN_ATTEMPTS, UNLOCK_RATE } from '../exercises/chordSymbols';
+import { CHORD_SYMBOL_LEVELS } from '../theory/chordSymbols';
 import {
   MANUAL_RANGE,
   RANDOM_KEY,
@@ -26,6 +28,8 @@ export interface SettingsFormHooks {
   change(next: Settings): void;
   /** Number of candidate notes, for the range info line. */
   rangeInfo(): string;
+  /** Highest unlocked chord-symbol level (from the statistics). */
+  unlockedSymbolLevel(): number;
 }
 
 /** Binds the settings form to the Settings object; shows only fields relevant for the active mode. */
@@ -71,6 +75,13 @@ export class SettingsForm {
     this.setChecked('intervalAllowed', s.intervals.allowed);
     this.select('quizMaxAccidentals').value = String(s.keyQuiz.maxAccidentals);
     this.input('showCircle').checked = s.keyQuiz.showCircle;
+    this.updateSymbolLevels();
+    this.select('symbolLevel').value = String(s.chordSymbols.level);
+    this.select('symbolNotation').value = s.chordSymbols.notation;
+    this.select('symbolRoots').value = s.chordSymbols.roots;
+    this.select('symbolAdaptive').value = s.chordSymbols.adaptive ? String(s.chordSymbols.adaptiveStrength) : '0';
+    this.input('symbolStrict').checked = s.chordSymbols.strict;
+    this.input('symbolUnlockAll').checked = s.chordSymbols.unlockAll;
     this.select('rhythmLevel').value = String(s.rhythm.level);
     this.select('rhythmBars').value = String(s.rhythm.bars);
     this.input('rhythmBpm').value = String(s.rhythm.bpm);
@@ -93,6 +104,27 @@ export class SettingsForm {
     this.input('chordWindowMs').value = String(s.chordWindowMs);
     this.updateRangeInfo();
     this.updateRangeVisibility();
+  }
+
+  /** Level options: locked levels are disabled unless "alle freischalten" is on. */
+  updateSymbolLevels(): void {
+    const s = this.hooks.get();
+    const unlocked = s.chordSymbols.unlockAll ? 5 : this.hooks.unlockedSymbolLevel();
+    const select = this.select('symbolLevel');
+    const value = select.value;
+    select.replaceChildren(
+      ...[1, 2, 3, 4, 5].map((l) => {
+        const option = new Option(`${l}: ${CHORD_SYMBOL_LEVELS[l]}${l > unlocked ? ' (gesperrt)' : ''}`, String(l));
+        option.disabled = l > unlocked;
+        return option;
+      }),
+    );
+    select.value = value || String(s.chordSymbols.level);
+    this.form.querySelector('#symbol-level-info')!.textContent =
+      unlocked >= 5
+        ? 'Alle Level sind frei. Geübt werden alle Akkordtypen bis zum gewählten Level.'
+        : `Freigeschaltet bis Level ${unlocked}. Level ${unlocked + 1} wird frei, sobald du in Level ${unlocked} mindestens ` +
+          `${UNLOCK_MIN_ATTEMPTS} Akkorde mit ${Math.round(UNLOCK_RATE * 100)} % Trefferquote (ohne Tipp) gegriffen hast.`;
   }
 
   updateRangeInfo(): void {
@@ -167,6 +199,15 @@ export class SettingsForm {
         allowed,
       },
       chords: { kinds: this.select('chordKinds').value as ChordSettings['kinds'], inversions, degrees },
+      chordSymbols: {
+        level: Number(this.select('symbolLevel').value),
+        unlockAll: this.input('symbolUnlockAll').checked,
+        notation: this.select('symbolNotation').value as 'international' | 'german',
+        roots: this.select('symbolRoots').value as 'white' | 'all' | 'circle',
+        strict: this.input('symbolStrict').checked,
+        adaptive: this.select('symbolAdaptive').value !== '0',
+        adaptiveStrength: (Number(this.select('symbolAdaptive').value) || s.chordSymbols.adaptiveStrength) as 1 | 2 | 3,
+      },
       rhythm: {
         level: Number(this.select('rhythmLevel').value),
         bars: Number(this.select('rhythmBars').value),
