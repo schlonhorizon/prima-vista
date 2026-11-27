@@ -29,11 +29,11 @@ export const ADAPTIVE_STRENGTHS: Record<AdaptiveStrength, AdaptiveOptions> = {
   3: { errorWeight: 5, slowWeight: 1.5, unseenFactor: 2.5, window: 20, decay: 0.85, minFactor: 0.3, maxFactor: 8 },
 };
 
-/** Error value of one attempt: skipped counts ¾, a hit with a tip ½. */
+/** Error value of one attempt: skipped counts ¾, a hit with a tip or after corrections ½. */
 function attemptError(a: ItemStats['recent'][number]): number {
   if (a.skipped) return 0.75;
   if (!a.ok) return 1;
-  return a.help ? 0.5 : 0;
+  return a.help || a.corrected ? 0.5 : 0;
 }
 
 /** Recency-weighted error rate of the last attempts (0 = always right, 1 = always wrong). */

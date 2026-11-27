@@ -267,6 +267,7 @@ body::before {
 .feedback.correct { color: var(--emerald); animation: settle 320ms ease-out; }
 .feedback.wrong { color: var(--bordeaux); animation: settle 320ms ease-out; }
 .feedback.skipped { color: #6b5a36; animation: settle 320ms ease-out; }
+.feedback.retry { color: #8a5a1f; animation: settle 240ms ease-out; }
 
 .feedback-detail {
   margin: 2px 0 0;

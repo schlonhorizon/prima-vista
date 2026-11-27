@@ -24,13 +24,34 @@ export interface TaskResult {
   readonly assisted: boolean;
   /** The task was skipped; the solution is shown, nothing counts as a mistake. */
   readonly skipped: boolean;
+  /** Retry mode: right in the end, but only after wrong keys. */
+  readonly corrected?: boolean;
   /** Pitch-class tasks: all tones right, but the required bass note was not the lowest. */
   readonly bassWrong?: boolean;
+}
+
+/** A wrong key while trying until correct: the task stays, the key is only marked. */
+export interface Slip {
+  readonly task: Task;
+  /** Keys that are not part of the answer. */
+  readonly extra: readonly number[];
+  /** All tones right, but the required bass note is not the lowest. */
+  readonly bassWrong: boolean;
 }
 
 export interface TrainerCallbacks {
   onTask(task: Task): void;
   onResult(result: TaskResult): void;
+  /** Only in retry mode: a wrong key that does not end the task. */
+  onSlip?(slip: Slip): void;
+}
+
+/** Behaviour that follows the settings (read on every task). */
+export interface TrainerBehaviour {
+  /** No "wrong": wrong keys are marked, the task stays until it is right. */
+  retryUntilCorrect(task: Task): boolean;
+  /** Pause after a correct answer (ms). */
+  pauseAfterCorrectMs(): number;
 }
 
 export interface TrainerTiming {
@@ -57,6 +78,8 @@ export class Trainer {
   /** Waiting after an answer and not advancing until resume() (e.g. explanation open). */
   private held = false;
   private assisted = false;
+  private slipped = false;
+  private retry = false;
   private timingValid = true;
   private nextTimer: number | undefined;
   private windowTimer: number | undefined;
@@ -68,6 +91,7 @@ export class Trainer {
     private stats: StatsStore,
     private callbacks: TrainerCallbacks,
     timing: Partial<TrainerTiming> = {},
+    private behaviour: TrainerBehaviour | null = null,
   ) {
     this.timing = { ...DEFAULT_TIMING, ...timing };
     this.hub.subscribe(this.onNote);
@@ -118,6 +142,8 @@ export class Trainer {
     window.clearTimeout(this.nextTimer);
     window.clearTimeout(this.windowTimer);
     this.task = this.exercise.nextTask();
+    this.retry = this.task.answer === 'play' && (this.behaviour?.retryUntilCorrect(this.task) ?? false);
+    this.slipped = false;
     this.stepIndex = 0;
     this.matcher = this.task.steps.length > 0 ? this.newMatcher() : null;
     this.waiting = false;
@@ -191,8 +217,10 @@ export class Trainer {
 
   private newMatcher(): Matcher {
     const task = this.task!;
-    if (task.pitchClassAnswer) return new PitchClassMatcher(task.pitchClassAnswer, task.chordWindowMs ?? 0);
-    return new StepMatcher(task.steps[this.stepIndex], task.chordWindowMs ?? 0);
+    // Trying until correct means no time pressure: no chord window.
+    const windowMs = this.retry ? 0 : (task.chordWindowMs ?? 0);
+    if (task.pitchClassAnswer) return new PitchClassMatcher(task.pitchClassAnswer, windowMs);
+    return new StepMatcher(task.steps[this.stepIndex], windowMs);
   }
 
   private onNote = (event: NoteEvent): void => {
@@ -224,7 +252,17 @@ export class Trainer {
       return;
     }
     if (result.status === 'correct') {
-      this.finish(true, result.time, { played: result.played ?? [], missing: [], extra: [], timeout: false });
+      this.finish(true, result.time, {
+        played: result.played ?? [],
+        missing: [],
+        extra: [],
+        timeout: false,
+        corrected: this.slipped,
+      });
+    } else if (this.retry) {
+      // Keep the task: mark the wrong key and let the player find the right one.
+      this.slipped = true;
+      this.callbacks.onSlip?.({ task: this.task!, extra: result.extra, bassWrong: result.reason === 'bass' });
     } else {
       this.finish(false, result.time, {
         played: result.played,
@@ -239,18 +277,26 @@ export class Trainer {
   private finish(
     correct: boolean,
     eventTime: number,
-    details: Pick<TaskResult, 'played' | 'missing' | 'extra' | 'timeout' | 'answerText' | 'bassWrong'>,
+    details: Pick<TaskResult, 'played' | 'missing' | 'extra' | 'timeout' | 'answerText' | 'bassWrong' | 'corrected'>,
   ): void {
     const task = this.task!;
     const now = performance.now();
     // Guard against event timestamps from a different time base.
     const time = eventTime >= this.startedAt - 1000 && eventTime <= now + 1000 ? eventTime : now;
     const elapsed = Math.max(0, time - this.startedAt);
-    const reactionMs = this.timingValid && elapsed <= this.timing.maxReactionMs ? Math.round(elapsed) : null;
+    // Trying until correct can take a while; the time still counts up to a minute.
+    const maxMs = this.retry ? Math.max(this.timing.maxReactionMs, 60000) : this.timing.maxReactionMs;
+    const reactionMs = this.timingValid && elapsed <= maxMs ? Math.round(elapsed) : null;
 
     this.waiting = true;
     window.clearTimeout(this.windowTimer);
-    this.stats.record(task.itemKey, { ok: correct, ms: reactionMs, played: details.played, assisted: this.assisted });
+    this.stats.record(task.itemKey, {
+      ok: correct,
+      ms: reactionMs,
+      played: details.played,
+      assisted: this.assisted,
+      corrected: details.corrected,
+    });
     this.callbacks.onResult({
       task,
       correct,
@@ -264,7 +310,7 @@ export class Trainer {
     if (!this.held) {
       this.nextTimer = window.setTimeout(
         () => this.next(),
-        correct ? this.timing.afterCorrectMs : this.timing.afterWrongMs,
+        correct ? (this.behaviour?.pauseAfterCorrectMs() ?? this.timing.afterCorrectMs) : this.timing.afterWrongMs,
       );
     }
   }

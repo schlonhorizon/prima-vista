@@ -256,6 +256,12 @@ Baustein der **adaptiven Logik** (Teil 6).
 - Nach der Antwort: Töne, Intervallformel (1 – ♭3 – 5 – 7 – 9) und eine kleine Klaviatur mit
   gegriffenen, fehlenden und falschen Tönen.
 - Statistik pro Akkordtyp (Quote, Ø Reaktionszeit, aktueller adaptiver Faktor).
+- **Weiterprobieren bis richtig** (Standard in diesem Modus): Ein falscher Ton wird nur kurz
+  markiert, die Aufgabe bleibt, bis der Akkord stimmt; kein Zeitfenster. Wer nicht weiterkommt,
+  überspringt (→). Richtig nach Fehlgriffen zählt als eigene Kategorie „korrigiert“ (weder Fehler
+  noch glatter Treffer; senkt die Quote, zählt nicht fürs Freischalten, adaptiv als halber Fehler).
+  Für die anderen Klavier-Modi gibt es dieselbe Option (Standard aus).
+- Pause nach einer richtigen Antwort einstellbar (Standard 1,5 s, alle Klavier-Modi).
 - Adaptive Gewichtung pro Akkordtyp (aus / leicht / normal / stark) über `exercises/adaptive.ts`.
 - Wissen: Lektion zum Lesen von Symbolen, Bausteinen, Umkehrungen, Slash-Akkorden und deutscher
   vs. internationaler Schreibweise; Tipp erklärt die Bausteine des Symbols (ohne Töne);

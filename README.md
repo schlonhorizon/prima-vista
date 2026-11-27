@@ -19,6 +19,7 @@ Modi:
 - **Akkordsymbole:** Symbol lesen („Fmaj9“, „B♭m7“, „C/E“) und greifen – jede Umkehrung zählt,
   optional strikt mit Grundton im Bass. Fünf freischaltbare Levels, deutsche oder internationale
   Schreibweise, adaptive Gewichtung schwacher Akkordtypen; danach Töne, Formel und Mini-Klaviatur.
+  Standardmäßig ohne „Falsch“: Die Aufgabe bleibt, bis der Akkord stimmt (oder du überspringst).
 - **Tonarten:** Vorzeichnung erkennen, Dur- und parallele Moll-Tonart per Button wählen;
   Quintenzirkel als ausblendbare Hilfe, der nach der Antwort die Lösung hervorhebt.
 
@@ -27,6 +28,8 @@ Für alle Modi:
 - **Wissensebene:** auf Wunsch ein **Tipp** während der Aufgabe (N), **Mehr erfahren** nach der
   Antwort (M) und eine **Lektion** pro Modus (B). Versuche mit Tipp zählen in der Statistik als
   „mit Hilfe“.
+- **Ruhiger Ablauf:** Pause nach einer richtigen Antwort einstellbar (Standard 1,5 s); optional
+  „Weiterprobieren bis richtig“ statt sofortiger Fehlermeldung.
 - **Überspringen** (→): zeigt die Lösung und geht weiter; zählt in der Statistik als
   „übersprungen“, nicht als Fehler. Alle Tastenkürzel zeigt **?** – keines liegt auf den
   Klaviertasten der Computertastatur. Alle Texte stehen als Markdown in `src/content/` und lassen sich
