@@ -89,6 +89,8 @@ export interface ChordSymbolSettings {
   roots: RootSelection;
   /** The root (or slash bass) must be the lowest note. */
   strict: boolean;
+  /** No "wrong": a task stays until the chord is right (default on in this mode). */
+  retryUntilCorrect: boolean;
   adaptive: boolean;
   /** 1 leicht, 2 normal, 3 stark */
   adaptiveStrength: 1 | 2 | 3;
@@ -117,6 +119,10 @@ export interface Settings {
   selectionMode: boolean;
   /** All notes of a chord must be struck within this many ms (0 = no limit). */
   chordWindowMs: number;
+  /** Pause after a correct answer before the next task (ms). */
+  pauseAfterCorrectMs: number;
+  /** Piano modes except chord symbols: no "wrong", keep trying until correct. */
+  retryUntilCorrect: boolean;
 }
 
 const STORAGE_KEY = 'prima-vista.settings.v1';
@@ -148,6 +154,7 @@ export function defaultSettings(): Settings {
       notation: 'international',
       roots: 'white',
       strict: false,
+      retryUntilCorrect: true,
       adaptive: true,
       adaptiveStrength: 2,
     },
@@ -158,6 +165,8 @@ export function defaultSettings(): Settings {
     showComputerKeys: true,
     selectionMode: true,
     chordWindowMs: 800,
+    pauseAfterCorrectMs: 1500,
+    retryUntilCorrect: false,
   };
 }
 
@@ -201,6 +210,8 @@ export function sanitize(raw: Record<string, unknown>): Settings {
     showComputerKeys: bool(raw.showComputerKeys, d.showComputerKeys),
     selectionMode: bool(raw.selectionMode, d.selectionMode),
     chordWindowMs: int(raw.chordWindowMs, 0, 5000, d.chordWindowMs),
+    pauseAfterCorrectMs: int(raw.pauseAfterCorrectMs, 200, 10000, d.pauseAfterCorrectMs),
+    retryUntilCorrect: bool(raw.retryUntilCorrect, d.retryUntilCorrect),
   };
 
   const rawRanges = (raw.ranges ?? {}) as Partial<Record<StaffMode, Partial<ModeRange>>>;
@@ -311,6 +322,7 @@ function sanitizeChordSymbols(raw: unknown, d: ChordSymbolSettings): ChordSymbol
     notation: oneOf(r.notation, ['international', 'german'], d.notation),
     roots: oneOf(r.roots, ['white', 'all', 'circle'], d.roots),
     strict: bool(r.strict, d.strict),
+    retryUntilCorrect: bool(r.retryUntilCorrect, d.retryUntilCorrect),
     adaptive: bool(r.adaptive, d.adaptive),
     adaptiveStrength: int(r.adaptiveStrength, 1, 3, d.adaptiveStrength) as 1 | 2 | 3,
   };

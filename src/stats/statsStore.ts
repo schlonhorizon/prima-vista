@@ -20,6 +20,8 @@ export interface Attempt {
   readonly help?: boolean;
   /** Skipped without an answer. */
   readonly skipped?: boolean;
+  /** Right in the end, but only after wrong keys ("weiterprobieren"). */
+  readonly corrected?: boolean;
 }
 
 export interface ItemStats {
@@ -31,6 +33,8 @@ export interface ItemStats {
   assistedMisses: number;
   /** Tasks skipped without an answer – neither hit nor miss. */
   skipped: number;
+  /** Right only after wrong keys (retry mode) – neither a clean hit nor a miss. */
+  correctedHits: number;
   /** Sum and count of reaction times of correct answers (all time). */
   hitTimeSum: number;
   hitTimeCount: number;
@@ -58,6 +62,8 @@ export interface AttemptInput {
   assisted?: boolean;
   /** The task was skipped (ok and ms are ignored). */
   skipped?: boolean;
+  /** Right only after wrong keys. */
+  corrected?: boolean;
   t?: number;
 }
 
@@ -82,6 +88,8 @@ export class StatsStore {
     if (attempt.assisted) {
       if (attempt.ok) item.assistedHits++;
       else item.assistedMisses++;
+    } else if (attempt.ok && attempt.corrected) {
+      item.correctedHits++;
     } else if (attempt.ok) {
       item.hits++;
       if (attempt.ms !== null) {
@@ -96,7 +104,8 @@ export class StatsStore {
       item.confusions[key] = (item.confusions[key] ?? 0) + 1;
     }
     const ms = attempt.ms === null ? null : Math.round(attempt.ms);
-    this.pushRecent(item, attempt.assisted ? { t, ok: attempt.ok, ms, help: true } : { t, ok: attempt.ok, ms });
+    const entry: Attempt = { t, ok: attempt.ok, ms, ...(attempt.assisted ? { help: true } : {}), ...(attempt.corrected ? { corrected: true } : {}) };
+    this.pushRecent(item, entry);
     item.lastSeen = t;
     this.save();
   }
@@ -152,6 +161,7 @@ function emptyItem(): ItemStats {
     assistedHits: 0,
     assistedMisses: 0,
     skipped: 0,
+    correctedHits: 0,
     hitTimeSum: 0,
     hitTimeCount: 0,
     recent: [],

@@ -81,6 +81,7 @@ export class SettingsForm {
     this.select('symbolRoots').value = s.chordSymbols.roots;
     this.select('symbolAdaptive').value = s.chordSymbols.adaptive ? String(s.chordSymbols.adaptiveStrength) : '0';
     this.input('symbolStrict').checked = s.chordSymbols.strict;
+    this.input('symbolRetry').checked = s.chordSymbols.retryUntilCorrect;
     this.input('symbolUnlockAll').checked = s.chordSymbols.unlockAll;
     this.select('rhythmLevel').value = String(s.rhythm.level);
     this.select('rhythmBars').value = String(s.rhythm.bars);
@@ -102,6 +103,8 @@ export class SettingsForm {
     this.input('showComputerKeys').checked = s.showComputerKeys;
     this.input('selectionMode').checked = s.selectionMode;
     this.input('chordWindowMs').value = String(s.chordWindowMs);
+    this.input('pauseAfterCorrectMs').value = String(s.pauseAfterCorrectMs);
+    this.input('retryUntilCorrect').checked = s.retryUntilCorrect;
     this.updateRangeInfo();
     this.updateRangeVisibility();
   }
@@ -164,6 +167,10 @@ export class SettingsForm {
     if (!Number.isInteger(windowMs) || windowMs < 0 || windowMs > 5000) {
       return this.showError('Das Zeitfenster muss zwischen 0 und 5000 ms liegen.');
     }
+    const pause = Number(this.input('pauseAfterCorrectMs').value);
+    if (!Number.isInteger(pause) || pause < 200 || pause > 10000) {
+      return this.showError('Die Pause nach einer richtigen Antwort muss zwischen 200 und 10000 ms liegen.');
+    }
     const allowed = this.checked('intervalAllowed') as StandardInterval[];
     if (allowed.length === 0) return this.showError('Bitte mindestens ein Intervall auswählen.');
     const bpm = Number(this.input('rhythmBpm').value);
@@ -205,6 +212,7 @@ export class SettingsForm {
         notation: this.select('symbolNotation').value as 'international' | 'german',
         roots: this.select('symbolRoots').value as 'white' | 'all' | 'circle',
         strict: this.input('symbolStrict').checked,
+        retryUntilCorrect: this.input('symbolRetry').checked,
         adaptive: this.select('symbolAdaptive').value !== '0',
         adaptiveStrength: (Number(this.select('symbolAdaptive').value) || s.chordSymbols.adaptiveStrength) as 1 | 2 | 3,
       },
@@ -229,6 +237,8 @@ export class SettingsForm {
       showComputerKeys: this.input('showComputerKeys').checked,
       selectionMode: this.input('selectionMode').checked,
       chordWindowMs: windowMs,
+      pauseAfterCorrectMs: pause,
+      retryUntilCorrect: this.input('retryUntilCorrect').checked,
     });
     this.updateRangeInfo();
     this.updateRangeVisibility();

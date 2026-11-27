@@ -20,7 +20,7 @@ import { StaffRenderer } from '../render/staffRenderer';
 import { effectiveRange, loadSettings, saveSettings, type Settings } from '../settings';
 import { StatsStore } from '../stats/statsStore';
 import { fifthsOf, germanKeyName } from '../theory/key';
-import { Trainer, type TaskResult } from '../trainer/trainer';
+import { Trainer, type Slip, type TaskResult } from '../trainer/trainer';
 import { KNOWLEDGE } from '../knowledge/providers';
 import { KeyQuizPanel } from './keyQuizPanel';
 import { ChordSymbolView } from './chordSymbolView';
@@ -51,6 +51,9 @@ const DISPLAY_ONLY: ReadonlyArray<keyof Settings> = [
   'selectionMode',
   'autoExplain',
   'computerPiano',
+  // Read at the next task / next answer; changing them must not replace the current task.
+  'pauseAfterCorrectMs',
+  'retryUntilCorrect',
 ];
 
 export class App {
@@ -129,10 +132,22 @@ export class App {
       // Rhythm patterns repeat naturally (quarter, quarter …), so no repeat avoidance.
       rhythm: new RhythmExercise(() => this.settings.rhythm, new WeightedSelector({ avoidRepeat: false })),
     };
-    this.trainer = new Trainer(this.exercise(), this.hub, this.stats, {
-      onTask: (task) => this.showTask(task),
-      onResult: (result) => this.showResult(result),
-    });
+    this.trainer = new Trainer(
+      this.exercise(),
+      this.hub,
+      this.stats,
+      {
+        onTask: (task) => this.showTask(task),
+        onResult: (result) => this.showResult(result),
+        onSlip: (slip) => this.showSlip(slip),
+      },
+      {},
+      {
+        retryUntilCorrect: (task) =>
+          task.exerciseId === CHORD_SYMBOL_ID ? this.settings.chordSymbols.retryUntilCorrect : this.settings.retryUntilCorrect,
+        pauseAfterCorrectMs: () => this.settings.pauseAfterCorrectMs,
+      },
+    );
   }
 
   start(): void {
@@ -286,7 +301,8 @@ export class App {
         this.session.timeSum += r.reactionMs;
         this.session.timeCount++;
       }
-      this.feedbackEl.textContent = `Richtig${r.assisted ? ' (mit Tipp)' : ''}: ${task.label}${time}`;
+      const how = r.corrected ? ' (nach Korrektur)' : r.assisted ? ' (mit Tipp)' : '';
+      this.feedbackEl.textContent = `Richtig${how}: ${task.label}${time}`;
       this.feedbackEl.className = 'feedback correct';
       this.detailEl.textContent = task.detail ?? '';
       r.expected.forEach((m) => this.keyboard.flash(m, 'correct', 600));
@@ -322,6 +338,21 @@ export class App {
     if (task.exerciseId === this.exercises.keys?.id && task.key) this.keyQuiz.showSolution(fifthsOf(task.key));
     $('m-last').textContent = r.reactionMs !== null ? formatMs(r.reactionMs) : '–';
     this.renderSession();
+  }
+
+  /** Retry mode: a wrong key is only marked; the task stays on screen. */
+  private showSlip(slip: Slip): void {
+    slip.extra.forEach((m) => this.keyboard.flash(m, 'wrong', 700));
+    const info = slip.task.info;
+    let hint = 'Nicht ganz – probier weiter.';
+    if (slip.bassWrong) {
+      hint = info?.kind === 'chordsym' && info.type.bassInterval
+        ? 'Alle Töne stimmen – jetzt noch den Basston nach unten.'
+        : 'Alle Töne stimmen – jetzt noch den Grundton nach unten.';
+    }
+    this.feedbackEl.textContent = hint;
+    this.feedbackEl.className = 'feedback retry';
+    this.detailEl.textContent = 'Überspringen mit → oder dem Button, falls du nicht weiterkommst.';
   }
 
   /** Rhythm: the notation with per-note marks is drawn by RhythmUi. */

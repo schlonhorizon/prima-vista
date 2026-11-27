@@ -7,6 +7,7 @@ interface Totals {
   assistedHits: number;
   assistedMisses: number;
   skipped: number;
+  corrected: number;
   timeSum: number;
   timeCount: number;
 }
@@ -17,7 +18,8 @@ const WEAK_MIN_ATTEMPTS = 3;
 /**
  * Statistics as collapsible groups; the groups come from the active exercise.
  * Rate and average time only count answers without help; "Mit Hilfe" and
- * "Übersprungen" are listed separately and never count as mistakes.
+ * "Übersprungen" are listed separately and never count as mistakes; "Korrigiert"
+ * (right only after wrong keys) is no mistake either, but lowers the rate.
  */
 export class StatsTable {
   private openGroups = new Set<string>();
@@ -29,7 +31,7 @@ export class StatsTable {
   }
 
   private totals(keys: readonly string[]): Totals {
-    const t: Totals = { hits: 0, misses: 0, assistedHits: 0, assistedMisses: 0, skipped: 0, timeSum: 0, timeCount: 0 };
+    const t: Totals = { hits: 0, misses: 0, assistedHits: 0, assistedMisses: 0, skipped: 0, corrected: 0, timeSum: 0, timeCount: 0 };
     for (const key of keys) {
       const item = this.stats.getItem(key);
       if (!item) continue;
@@ -38,6 +40,7 @@ export class StatsTable {
       t.assistedHits += item.assistedHits ?? 0;
       t.assistedMisses += item.assistedMisses ?? 0;
       t.skipped += item.skipped ?? 0;
+      t.corrected += item.correctedHits ?? 0;
       t.timeSum += item.hitTimeSum;
       t.timeCount += item.hitTimeCount;
     }
@@ -60,10 +63,15 @@ export class StatsTable {
     summary.innerHTML = '<span class="octave-name"></span><span class="octave-figures"></span>';
     summary.querySelector('.octave-name')!.textContent = group.title;
     const weakCount = rows.filter((r) => isWeak(r.totals)).length;
-    const total = sum.hits + sum.misses;
+    const total = sum.hits + sum.misses + sum.corrected;
     const assisted = sum.assistedHits + sum.assistedMisses;
     const parts: string[] = [];
-    if (total > 0) parts.push(`${sum.hits} ✓ · ${sum.misses} ✗ · ${percent(sum.hits / total)} · Ø ${formatAvg(sum)}`);
+    if (total > 0) {
+      parts.push(
+        `${sum.hits} ✓ · ${sum.misses} ✗${sum.corrected ? ` · ${sum.corrected} korrigiert` : ''} · ` +
+          `${percent(sum.hits / total)} · Ø ${formatAvg(sum)}`,
+      );
+    }
     if (assisted > 0) parts.push(`${assisted} mit Hilfe`);
     if (sum.skipped > 0) parts.push(`${sum.skipped} übersprungen`);
     if (weakCount > 0) parts.push(`${weakCount} schwach`);
@@ -74,7 +82,7 @@ export class StatsTable {
     const table = document.createElement('table');
     table.className = 'stats-table';
     const head = document.createElement('tr');
-    for (const [i, title] of [...group.columns, 'Richtig', 'Falsch', 'Quote', group.timeLabel ?? 'Ø Zeit', 'Mit Hilfe', 'Übersprungen'].entries()) {
+    for (const [i, title] of [...group.columns, 'Richtig', 'Falsch', 'Korrigiert', 'Quote', group.timeLabel ?? 'Ø Zeit', 'Mit Hilfe', 'Übersprungen'].entries()) {
       const th = document.createElement('th');
       th.textContent = title;
       if (i < group.columns.length) th.className = 'text';
@@ -96,11 +104,12 @@ export class StatsTable {
   }
 
   private row(row: StatsRow, t: Totals, textColumns: number): HTMLElement {
-    const attempts = t.hits + t.misses;
+    const attempts = t.hits + t.misses + t.corrected;
     const cells = [
       ...row.cells,
       String(t.hits),
       String(t.misses),
+      t.corrected > 0 ? String(t.corrected) : '–',
       attempts > 0 ? percent(t.hits / attempts) : '–',
       formatAvg(t),
       t.assistedHits + t.assistedMisses > 0 ? `${t.assistedHits} ✓ ${t.assistedMisses} ✗` : '–',
@@ -111,7 +120,7 @@ export class StatsTable {
       const td = document.createElement('td');
       td.textContent = text;
       if (i < textColumns) td.className = 'text';
-      if (i === textColumns + 2 && isWeak(t)) td.classList.add('weak');
+      if (i === textColumns + 3 && isWeak(t)) td.classList.add('weak');
       tr.appendChild(td);
     });
     return tr;
@@ -119,7 +128,7 @@ export class StatsTable {
 }
 
 function isWeak(t: Totals): boolean {
-  const attempts = t.hits + t.misses;
+  const attempts = t.hits + t.misses + t.corrected;
   return attempts >= WEAK_MIN_ATTEMPTS && t.hits / attempts < WEAK_RATE;
 }
 

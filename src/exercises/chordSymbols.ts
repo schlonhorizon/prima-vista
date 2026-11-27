@@ -22,7 +22,7 @@ import type { Exercise, Task } from './types';
 
 export const CHORD_SYMBOL_ID = 'chordsym';
 
-/** Level n+1 unlocks once level n has at least this many answers … */
+/** Level n+1 unlocks once level n has at least this many answers … (corrected ones count as not clean) */
 export const UNLOCK_MIN_ATTEMPTS = 20;
 /** … with at least this hit rate (answers without help). */
 export const UNLOCK_RATE = 0.8;
@@ -31,14 +31,17 @@ export function chordSymbolItemKey(type: ChordSymbolType): string {
   return `${CHORD_SYMBOL_ID}|${type.id}`;
 }
 
-/** Hits and misses (without help) of all chord types of a level. */
+/**
+ * Clean hits and the other answers (misses, and hits only after corrections) of all
+ * chord types of a level, without help.
+ */
 export function levelTotals(stats: StatsStore, level: number): { hits: number; misses: number } {
   let hits = 0;
   let misses = 0;
   for (const t of CHORD_SYMBOL_TYPES.filter((t) => t.level === level)) {
     const item = stats.getItem(chordSymbolItemKey(t));
     hits += item?.hits ?? 0;
-    misses += item?.misses ?? 0;
+    misses += (item?.misses ?? 0) + (item?.correctedHits ?? 0);
   }
   return { hits, misses };
 }
